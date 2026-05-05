@@ -26,6 +26,14 @@ describe('interpolateValue', () => {
   test('returns non-string values as-is', () => {
     expect(interpolateValue(42, vars)).toBe(42);
   });
+
+  test('handles empty string', () => {
+    expect(interpolateValue('', vars)).toBe('');
+  });
+
+  test('handles empty vars object', () => {
+    expect(interpolateValue('${HOST}', {})).toBe('${HOST}');
+  });
 });
 
 describe('interpolateEnv', () => {
@@ -55,5 +63,9 @@ describe('interpolateEnv', () => {
   test('handles env with no references', () => {
     const env = { FOO: 'bar', BAZ: 'qux' };
     expect(interpolateEnv(env)).toEqual({ FOO: 'bar', BAZ: 'qux' });
+  });
+
+  test('handles empty env object', () => {
+    expect(interpolateEnv({})).toEqual({});
   });
 });
