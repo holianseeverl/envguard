@@ -1,66 +1,83 @@
 /**
- * reporter.js
- * Formats and prints audit results to the console.
+ * reporter.js - Format and print validation/audit/diff results.
  */
 
-const RESET = '\x1b[0m';
-const RED = '\x1b[31m';
-const YELLOW = '\x1b[33m';
-const GREEN = '\x1b[32m';
-const CYAN = '\x1b[36m';
-const BOLD = '\x1b[1m';
-
 /**
- * Format an audit result into a human-readable string.
- *
- * @param {import('./auditor').AuditResult} result
+ * Format a validation result into a human-readable string.
+ * @param {Object} result - { valid, errors }
  * @returns {string}
  */
 function formatResult(result) {
-  const lines = [];
-
-  if (result.missing.length === 0 && result.invalid.length === 0) {
-    lines.push(`${GREEN}${BOLD}✔ All required variables are present and valid.${RESET}`);
+  if (result.valid) {
+    return '✅  All environment variables are valid.';
   }
-
-  if (result.missing.length > 0) {
-    lines.push(`\n${RED}${BOLD}✖ Missing required variables (${result.missing.length}):${RESET}`);
-    for (const key of result.missing) {
-      lines.push(`  ${RED}• ${key}${RESET} — ${result.errors[key]}`);
-    }
+  const lines = ['❌  Validation failed:'];
+  for (const err of result.errors) {
+    lines.push(`  • ${err}`);
   }
-
-  if (result.invalid.length > 0) {
-    lines.push(`\n${RED}${BOLD}✖ Invalid variables (${result.invalid.length}):${RESET}`);
-    for (const key of result.invalid) {
-      lines.push(`  ${RED}• ${key}${RESET} — ${result.errors[key]}`);
-    }
-  }
-
-  if (result.warnings.length > 0) {
-    lines.push(`\n${YELLOW}${BOLD}⚠ Optional variables not set (${result.warnings.length}):${RESET}`);
-    for (const key of result.warnings) {
-      lines.push(`  ${YELLOW}• ${key}${RESET}`);
-    }
-  }
-
-  if (result.extra.length > 0) {
-    lines.push(`\n${CYAN}${BOLD}ℹ Extra variables not in schema (${result.extra.length}):${RESET}`);
-    for (const key of result.extra) {
-      lines.push(`  ${CYAN}• ${key}${RESET}`);
-    }
-  }
-
   return lines.join('\n');
 }
 
 /**
- * Print audit result to stdout.
- *
- * @param {import('./auditor').AuditResult} result
+ * Print a validation result to stdout.
+ * @param {Object} result
  */
 function printResult(result) {
   console.log(formatResult(result));
 }
 
-module.exports = { formatResult, printResult };
+/**
+ * Format a diff result into a human-readable string.
+ * @param {Object} diff - output of diffEnvs or diffEnvAgainstSchema
+ * @returns {string}
+ */
+function formatDiff(diff) {
+  const lines = [];
+
+  if (diff.added && diff.added.length > 0) {
+    lines.push('➕  Added:');
+    for (const { key, value } of diff.added) {
+      lines.push(`  + ${key}=${value}`);
+    }
+  }
+
+  if (diff.removed && diff.removed.length > 0) {
+    lines.push('➖  Removed:');
+    for (const { key, value } of diff.removed) {
+      lines.push(`  - ${key}=${value}`);
+    }
+  }
+
+  if (diff.changed && diff.changed.length > 0) {
+    lines.push('✏️   Changed:');
+    for (const { key, from, to } of diff.changed) {
+      lines.push(`  ~ ${key}: ${from} → ${to}`);
+    }
+  }
+
+  if (diff.missingInEnv && diff.missingInEnv.length > 0) {
+    lines.push('⚠️   Missing in env (declared in schema):');
+    for (const { key } of diff.missingInEnv) {
+      lines.push(`  ? ${key}`);
+    }
+  }
+
+  if (diff.undeclaredInSchema && diff.undeclaredInSchema.length > 0) {
+    lines.push('🔍  Undeclared in schema:');
+    for (const { key, value } of diff.undeclaredInSchema) {
+      lines.push(`  ! ${key}=${value}`);
+    }
+  }
+
+  return lines.length > 0 ? lines.join('\n') : '✅  No differences found.';
+}
+
+/**
+ * Print a diff result to stdout.
+ * @param {Object} diff
+ */
+function printDiff(diff) {
+  console.log(formatDiff(diff));
+}
+
+module.exports = { formatResult, printResult, formatDiff, printDiff };
