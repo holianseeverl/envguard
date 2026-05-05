@@ -1,43 +1,32 @@
-/**
- * parser.js
- * Parses .env files into key-value objects
- */
-
 const fs = require('fs');
-const path = require('path');
+const { interpolateEnv } = require('./interpolator');
 
 /**
- * Parse a raw .env string into a key-value map.
- * Handles comments, blank lines, quoted values, and inline comments.
- *
- * @param {string} content - Raw .env file content
+ * Parse a .env formatted string into a key/value object.
+ * Supports quoted values, inline comments, and blank lines.
+ * @param {string} content
+ * @param {{ interpolate?: boolean }} [options]
  * @returns {Record<string, string>}
  */
-function parseEnvString(content) {
+function parseEnvString(content, options = {}) {
   const result = {};
 
-  const lines = content.split(/\r?\n/);
-
-  for (const line of lines) {
-    const trimmed = line.trim();
+  for (const rawLine of content.split(/\r?\n/)) {
+    const line = rawLine.trim();
 
     // Skip blank lines and comments
-    if (!trimmed || trimmed.startsWith('#')) continue;
+    if (!line || line.startsWith('#')) continue;
 
-    const eqIndex = trimmed.indexOf('=');
+    const eqIndex = line.indexOf('=');
     if (eqIndex === -1) continue;
 
-    const key = trimmed.slice(0, eqIndex).trim();
-    let value = trimmed.slice(eqIndex + 1).trim();
+    const key = line.slice(0, eqIndex).trim();
+    let value = line.slice(eqIndex + 1).trim();
 
-    if (!key) continue;
-
-    // Strip inline comments (only when value is not quoted)
+    // Strip inline comment (only outside quotes)
     if (!value.startsWith('"') && !value.startsWith("'")) {
       const commentIdx = value.indexOf(' #');
-      if (commentIdx !== -1) {
-        value = value.slice(0, commentIdx).trim();
-      }
+      if (commentIdx !== -1) value = value.slice(0, commentIdx).trim();
     }
 
     // Strip surrounding quotes
@@ -48,27 +37,21 @@ function parseEnvString(content) {
       value = value.slice(1, -1);
     }
 
-    result[key] = value;
+    if (key) result[key] = value;
   }
 
-  return result;
+  return options.interpolate ? interpolateEnv(result) : result;
 }
 
 /**
  * Read and parse a .env file from disk.
- *
- * @param {string} filePath - Absolute or relative path to the .env file
+ * @param {string} filePath
+ * @param {{ interpolate?: boolean }} [options]
  * @returns {Record<string, string>}
  */
-function parseEnvFile(filePath) {
-  const resolved = path.resolve(filePath);
-
-  if (!fs.existsSync(resolved)) {
-    throw new Error(`envguard: file not found: ${resolved}`);
-  }
-
-  const content = fs.readFileSync(resolved, 'utf8');
-  return parseEnvString(content);
+function parseEnvFile(filePath, options = {}) {
+  const content = fs.readFileSync(filePath, 'utf8');
+  return parseEnvString(content, options);
 }
 
 module.exports = { parseEnvString, parseEnvFile };
