@@ -23,6 +23,14 @@ describe('formatResult', () => {
     const bullets = lines.filter((l) => l.trim().startsWith('•'));
     expect(bullets).toHaveLength(2);
   });
+
+  test('returns failure message with no errors listed when errors array is empty', () => {
+    const result = formatResult({ valid: false, errors: [] });
+    expect(result).toContain('❌');
+    const lines = result.split('\n');
+    const bullets = lines.filter((l) => l.trim().startsWith('•'));
+    expect(bullets).toHaveLength(0);
+  });
 });
 
 describe('formatDiff', () => {
@@ -76,5 +84,10 @@ describe('formatDiff', () => {
     });
     expect(result).toContain('Added');
     expect(result).toContain('Removed');
+  });
+
+  test('shows no differences message when all sections are empty arrays', () => {
+    const result = formatDiff({ added: [], removed: [], changed: [] });
+    expect(result).toContain('No differences');
   });
 });
