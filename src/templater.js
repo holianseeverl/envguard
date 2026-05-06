@@ -49,11 +49,20 @@ function generateTemplate(schema, options = {}) {
  * @param {Object} schema
  * @param {string} filePath
  * @param {Object} options
+ * @returns {string} the generated template content
+ * @throws {Error} if filePath is not provided or writing fails
  */
 function writeTemplate(schema, filePath, options = {}) {
+  if (!filePath) {
+    throw new Error('writeTemplate: filePath is required');
+  }
   const fs = require('fs');
   const content = generateTemplate(schema, options);
-  fs.writeFileSync(filePath, content + '\n', 'utf8');
+  try {
+    fs.writeFileSync(filePath, content + '\n', 'utf8');
+  } catch (err) {
+    throw new Error(`writeTemplate: failed to write file "${filePath}": ${err.message}`);
+  }
   return content;
 }
 
